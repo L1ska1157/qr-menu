@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -File \".specify/scripts/powershell/check-prerequisites.ps1\" -Json -PathsOnly)"
+    ]
+  }
+}
