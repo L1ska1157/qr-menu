@@ -54,7 +54,7 @@ Submits a new order for the active session. Creates an `orders` row and one `ord
 
 ## GET /api/orders
 
-Returns only unpaid orders for the session. Used to populate the cart view.
+Returns all orders for the session (paid and unpaid), ordered by `placed_at` ascending. Used to populate the orders page. `unpaid_total_cents` is the sum of `total_cents` for orders where `is_paid = false`.
 
 ### Response `200 OK`
 
@@ -66,6 +66,7 @@ Returns only unpaid orders for the session. Used to populate the cart view.
       "order_id": "uuid",
       "placed_at": "2026-04-06T19:32:00Z",
       "total_cents": 1950,
+      "is_paid": false,
       "items": [ { "name": "Bruschetta", "quantity": 2, "line_total_cents": 1300 } ]
     }
   ],

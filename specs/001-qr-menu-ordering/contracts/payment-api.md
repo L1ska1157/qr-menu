@@ -30,9 +30,11 @@ Pass one or more unpaid order IDs from the session. To pay all at once, include 
 }
 ```
 
-The frontend redirects the diner's browser to `redirect_url`. The provider redirects back to:
-- Success: `GET /payment/success?payment_id=<uuid>&ref=<provider_ref>`
-- Failure/cancel: `GET /payment/failure?payment_id=<uuid>`
+The frontend redirects the diner's browser to `redirect_url`. The provider is configured with:
+- **Success URL**: `APP_BASE_URL/orders.html?payment=success&session_id=<uuid>`
+- **Cancel/failure URL**: `APP_BASE_URL/orders.html?payment=failed&session_id=<uuid>`
+
+On return, `orders.html` detects the `?payment=` query param and displays a success or failure banner. The page then polls `GET /api/payments/status/:session_id` every 3 seconds, up to 60 seconds, until the payment status is `completed`. If no confirmation arrives within 60 seconds, the page shows a "Taking longer than expected — your payment is being verified" message and provides a manual refresh option.
 
 ### Error Responses
 
@@ -45,42 +47,9 @@ The frontend redirects the diner's browser to `redirect_url`. The provider redir
 
 ---
 
-## GET /payment/success
-
-Return URL the provider redirects the diner's browser to after completing payment. This endpoint **does not confirm payment** — it renders a "pending confirmation" page only. Authoritative payment confirmation comes via `POST /webhooks/payment` (server-to-server). The page polls `GET /api/payments/status/:session_id` every 3 seconds, up to 60 seconds, until the payment status is `completed`. If no confirmation arrives within 60 seconds, the page shows a "Taking longer than expected — your payment is being verified" message and provides a manual refresh option.
-
-### Query Params
-
-| Param | Type | Notes |
-|-------|------|-------|
-| `payment_id` | uuid | Internal payment row ID — used to scope the status poll |
-| `ref` | string | Provider's transaction reference (stored as `provider_reference` once webhook confirms) |
-
-### Response
-
-Renders `confirmation.html` with **pending confirmation** state. Transitions to success state once `GET /api/payments/status/:session_id` returns `status: "completed"` for the payment. No JSON — this is a browser redirect destination.
-
----
-
-## GET /payment/failure
-
-Return URL called when diner cancels or payment fails at provider. Marks payment row as `failed` or `cancelled`.
-
-### Query Params
-
-| Param | Type | Notes |
-|-------|------|-------|
-| `payment_id` | uuid | Internal payment row ID |
-
-### Response
-
-Renders `confirmation.html` with failure state and retry option. No JSON — browser redirect destination.
-
----
-
 ## POST /webhooks/payment
 
-Server-to-server callback from the external payment provider. This is the **authoritative** confirmation of payment completion — it is the only mechanism that transitions a payment to `completed` status in the database. The `success_url` redirect alone is never trusted.
+Server-to-server callback from the external payment provider. This is the **authoritative** confirmation of payment completion — it is the only mechanism that transitions a payment to `completed` status in the database. The success URL redirect alone is never trusted.
 
 ### Security
 
@@ -96,7 +65,8 @@ Provider-specific payload. The `order_id` or `payment_id` passed as metadata dur
 2. Look up `payments` row by `provider_reference` or metadata `payment_id`
 3. If payment status is already `completed`, return `200` immediately (idempotent — duplicate webhooks are ignored)
 4. Mark payment `completed`, set `completed_at = now()`, store `provider_reference`
-5. If all orders in the session are now paid, update `table_sessions.status` to `paid`
+5. Mark covered orders `is_paid = true`, set `payment_id` FK on each order
+6. If all orders in the session are now paid, update `table_sessions.status` to `paid`
 
 ### Response `200 OK`
 
@@ -113,7 +83,7 @@ Empty body. The provider expects a `200` to stop retrying.
 
 ## GET /api/payments/status/:session_id
 
-Returns all completed payments for the session, each with the order IDs it covered. Used by the success page to confirm which orders were paid and to persist the payment record on the client side.
+Returns all completed payments for the session, each with the order IDs it covered. Used by the orders page to confirm which orders were paid after returning from the provider.
 
 ### Response `200 OK`
 

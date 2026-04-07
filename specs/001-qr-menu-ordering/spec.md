@@ -12,7 +12,7 @@
 - Q: Does this feature include a staff-facing interface (kitchen display or waiter dashboard)? → A: Staff interface is a separate feature; this spec covers the diner-facing experience only.
 - Q: Is payment collected at the time of placing each order, or at the end of the dining session? → A: Both modes are supported — diners can pay immediately after each order or accumulate a tab and settle a single consolidated bill at any time.
 - Q: Can diners place multiple rounds of orders during the same table visit? → A: Yes — diners can submit new orders at any point during their visit; each submission creates a separate order record linked to the same table session.
-- Q: How is the table session protected from unauthorized access (e.g., someone guessing another table's URL)? → A: The QR code URL contains a time-limited session token that expires at the end of the service period (e.g., daily or per shift); expired or unrecognized tokens are rejected.
+- Q: How is the table session protected from unauthorized access (e.g., someone guessing another table's URL)? → Session identity is derived from a permanent table UUID embedded in the QR code; no token is used.
 - Q: What is the scope of payment within the menu interface? → A: Tapping "Pay" redirects the diner to an external payment provider; the menu interface shows a confirmation screen after the diner returns from the provider.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -27,7 +27,7 @@ A diner scans the QR code on their table with a smartphone camera. The menu load
 
 **Acceptance Scenarios**:
 
-1. **Given** a diner is seated at a table with a QR code, **When** they scan it with their phone camera, **Then** the restaurant menu opens in their browser within 3 seconds showing all categories and items
+1. **Given** a diner is seated at a table with a QR code, **When** they scan it with their phone camera, **Then** the restaurant menu opens in their browser showing all categories and items
 2. **Given** the menu is loaded, **When** the diner taps a category in the navigation bar, **Then** the page scrolls instantly to that category section
 3. **Given** the diner is viewing a menu item, **When** they tap "Add to Cart", **Then** the item is added and the cart counter updates to reflect the new total
 4. **Given** the cart contains at least one item, **When** the diner reviews their cart and confirms the order, **Then** the order is submitted and the diner sees an on-screen confirmation
@@ -102,8 +102,8 @@ Each physical table has a unique QR code. When scanned, it automatically identif
 - **FR-005**: System MUST associate the user session and all actions (orders, payments, waiter requests) with the table ID encoded in the scanned QR code
 - **FR-006**: Users MUST be able to review their cart contents and submit an order; immediately after submission the cart MUST be cleared and the user MUST see a confirmation message with a button to return to the main menu page
 - **FR-007**: System MUST record each submitted order with: table ID, ordered items and quantities, total amount, and submission timestamp
-- **FR-008**: Users MUST be able to view an itemized bill for their table showing all ordered items and the total amount due
-- **FR-009**: The cart view MUST display only the current session's unpaid orders; each unpaid order MUST have an individual "Pay" button; the cart MUST show the total unpaid sum across all orders; at the bottom of the page a "Pay all" option with a checkbox MUST allow the diner to pay all unpaid orders in a single transaction
+- **FR-008**: Users MUST be able to view an itemized orders page showing all orders placed during the session (both paid and unpaid), with quantities and the total amount due
+- **FR-009**: The orders page MUST display all orders for the session; paid orders MUST be marked as paid; unpaid orders MUST each have an individual "Pay" button; the page MUST show the total unpaid sum across all orders; at the bottom of the page a "Pay all" option with a checkbox MUST allow the diner to pay all unpaid orders in a single transaction
 - **FR-010**: Tapping "Pay" (individual order) or confirming "Pay all" MUST immediately redirect the diner to the external payment provider; after payment succeeds or fails the diner MUST be returned to the menu page with a visible success or failure message
 - **FR-011**: Users MUST be able to tap a "Call Waiter" button to submit a service request linked to their table
 - **FR-012**: System MUST enforce a 2-minute cooldown per table between "Call Waiter" requests; during the cooldown the button MUST appear grey and display a visual circular countdown outline showing the remaining time until the next request is allowed
@@ -115,7 +115,7 @@ Each physical table has a unique QR code. When scanned, it automatically identif
 - **FR-018**: A new session for a table can only be created when the previous session on that table is `closed`; the waiter closes a session when cleaning the table after guests leave
 - **FR-020**: The cart is shared across all devices at the same table — any diner who opens the menu at a given table sees and edits the same cart; cart state is persisted server-side so that reloading the page or rescanning the QR code restores the current cart without data loss
 - **FR-019**: Menu item availability is re-fetched on every page load; cart items whose `is_available` has become `false` since they were added MUST be displayed in grey in the cart (same visual treatment as in the menu) indicating they cannot be ordered; before confirming an order submission the system MUST verify availability server-side and reject the order with a message identifying any unavailable items so the diner can remove them and resubmit
-- **FR-017**: After submitting an order, the cart MUST be cleared; diners MUST be able to immediately start a new order for the same table session; all submitted orders from the same session accumulate as unpaid orders visible in the cart view until paid
+- **FR-017**: After submitting an order, the cart MUST be cleared; diners MUST be able to immediately start a new order for the same table session; all submitted orders from the same session accumulate as unpaid orders visible in the orders page until paid
 - **FR-015**: This feature covers the diner-facing experience only. A staff-facing interface (kitchen display, waiter dashboard, order management) is out of scope and will be addressed as a separate feature. Orders and waiter call requests submitted by diners MUST be persisted so they are available for retrieval by the future staff interface.
 - **FR-016**: The system MUST support two payment modes: (a) immediate payment at the time of placing an order, and (b) deferred payment where the diner accumulates a running tab and settles a single consolidated bill at any time before leaving. The diner chooses when to pay.
 
@@ -124,9 +124,9 @@ Each physical table has a unique QR code. When scanned, it automatically identif
 - **Table**: Unique identifier, table number; QR code encodes the table ID permanently
 - **Menu Category**: Name, display order; shown on page only when at least one available item exists in the category
 - **Menu Item**: Name, description, ingredients list, estimated preparation time, price, category, availability status
-- **Cart**: Table ID, list of items with quantities, session timestamp
-- **Order**: Table ID, ordered items with quantities, total price, placement timestamp, order status
-- **Payment**: Associated order(s), amount paid, payment mode (immediate or deferred), payment status, completion timestamp; a table may have multiple partial payments or one consolidated payment
+- **Cart**: Session ID, list of items with quantities, added_at timestamp
+- **Order**: Table ID, ordered items with quantities, total price, placement timestamp, order status, paid flag
+- **Payment**: Associated order(s), amount paid, payment status, completion timestamp; a table may have multiple partial payments or one consolidated payment
 - **Waiter Request**: Table ID, request timestamp, cooldown status
 
 ## Success Criteria *(mandatory)*

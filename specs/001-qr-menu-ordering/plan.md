@@ -5,7 +5,7 @@
 
 ## Summary
 
-A web-based restaurant ordering system where diners scan a per-table QR code to access a mobile-optimised menu, build a cart across multiple rounds, pay via external provider redirect, and call for waiter assistance. Built with Node.js + Express backend, Alpine.js frontend, and PostgreSQL for all persistent state. No app installation required; session identity is derived from a time-limited signed token embedded in the QR code URL.
+A web-based restaurant ordering system where diners scan a per-table QR code to access a mobile-optimised menu, build a cart across multiple rounds, pay via external provider redirect, and call for waiter assistance. Built with Node.js + Express backend, Alpine.js frontend, and PostgreSQL for all persistent state. No app installation required; session identity is tied to the permanent table UUID embedded in the QR code URL — sessions are created on first scan of a free table and closed by the waiter after cleaning.
 
 ## Technical Context
 
@@ -50,10 +50,10 @@ specs/001-qr-menu-ordering/
 ```text
 backend/
 ├── src/
-│   ├── config/          # env, db pool, jwt config
+│   ├── config/          # env, db pool config
 │   ├── db/              # SQL migrations, seed data, query helpers
-│   ├── routes/          # Express route handlers (menu, order, payment, waiter, session)
-│   ├── middleware/       # session token validation, error handler
+│   ├── routes/          # Express route handlers (menu, order, payment, waiter, table)
+│   ├── middleware/       # session validation, error handler
 │   └── services/        # business logic (cart validation, payment initiation, cooldown)
 ├── tests/
 │   ├── integration/     # supertest API tests per route
@@ -62,15 +62,16 @@ backend/
 
 frontend/
 ├── public/
-│   ├── index.html       # menu page (Alpine.js, loaded via QR code URL)
+│   ├── index.html       # scan landing page — table taken/free, session init
+│   ├── menu.html        # menu browsing + cart badge + call waiter button
 │   ├── cart.html        # cart review + order submission
-│   ├── bill.html        # itemized bill + payment initiation
-│   ├── confirmation.html # payment success/failure return page
-│   └── error.html       # invalid/expired session error page
+│   ├── orders.html      # all session orders (paid + unpaid), payment initiation
+│   └── error.html       # unknown table ID error page
 ├── js/
+│   ├── landing.js       # table status check, session init, sessionStorage
 │   ├── menu.js          # menu browsing, category nav, add-to-cart logic
 │   ├── cart.js          # cart state, quantity management, order submit
-│   ├── bill.js          # bill fetch, payment redirect initiation
+│   ├── orders.js        # order history, payment redirect, payment result banner
 │   └── waiter.js        # call waiter button + cooldown state
 └── css/
     └── styles.css       # mobile-first responsive styles
