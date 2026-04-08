@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cart</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body x-data="cartApp()" x-cloak>
+
+  <header style="background:#fff; border-bottom:1px solid var(--color-border); padding:12px var(--spacing); display:flex; align-items:center; justify-content:space-between;">
+    <a href="/menu.html" class="btn btn-ghost btn-sm">← Menu</a>
+    <h1 style="font-size:1rem;">Your Cart</h1>
+    <!-- Orders button (top right) — shown only when there are unpaid orders -->
+    <a x-show="unpaidOrderCount > 0"
+       href="/orders.html"
+       class="btn btn-secondary btn-sm">
+      Orders (<span x-text="unpaidOrderCount"></span>)
+    </a>
+    <div x-show="unpaidOrderCount === 0" style="width:80px;"></div>
+  </header>
+
+  <div x-show="loading" class="spinner"></div>
+
+  <template x-if="!loading">
+    <main class="container mt-2">
+
+      <!-- Empty state -->
+      <div x-show="items.length === 0" class="text-center text-muted mt-3">
+        <p>Your cart is empty.</p>
+        <a href="/menu.html" class="btn btn-primary mt-2">Browse menu</a>
+      </div>
+
+      <!-- Cart items -->
+      <div x-show="items.length > 0">
+        <template x-for="item in items" :key="item.menu_item_id">
+          <div class="cart-item mb-1" :class="{ unavailable: !item.is_available }">
+            <div class="cart-item-name">
+              <span x-text="item.name"></span>
+              <span x-show="!item.is_available" class="text-muted" style="font-size:0.75rem;"> (unavailable)</span>
+            </div>
+            <div class="qty-control">
+              <button @click="decrement(item.menu_item_id)">−</button>
+              <span x-text="item.quantity"></span>
+              <button @click="increment(item.menu_item_id)">+</button>
+            </div>
+            <div class="cart-item-price" x-text="'€' + ((item.price_cents * item.quantity) / 100).toFixed(2)"></div>
+          </div>
+        </template>
+
+        <!-- Total -->
+        <div class="total-bar mt-2">
+          <span class="total-bar-label">Total</span>
+          <span class="total-bar-amount" x-text="'€' + total.toFixed(2)"></span>
+        </div>
+
+        <!-- Error message -->
+        <div x-show="errorMsg" class="banner banner-failed mt-1" x-text="errorMsg"></div>
+      </div>
+    </main>
+  </template>
+
+  <!-- Sticky Place Order -->
+  <div class="sticky-bottom" x-show="items.length > 0">
+    <div class="container">
+      <span class="text-muted" x-text="items.length + ' item(s)'"></span>
+      <button class="btn btn-primary" @click="submitOrder()" :disabled="submitting">
+        <span x-show="!submitting">Place Order</span>
+        <span x-show="submitting">Placing…</span>
+      </button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="/js/cart.js"></script>
+</body>
+</html>

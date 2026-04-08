@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orders</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body x-data="ordersApp()" x-cloak>
+
+  <header style="background:#fff; border-bottom:1px solid var(--color-border); padding:12px var(--spacing); display:flex; align-items:center; justify-content:space-between;">
+    <a href="/cart.html" class="btn btn-ghost btn-sm">← Cart</a>
+    <h1 style="font-size:1rem;">Orders</h1>
+    <div style="width:60px;"></div>
+  </header>
+
+  <!-- Payment result banner -->
+  <div class="container mt-2">
+    <div x-show="paymentBanner === 'success'" class="banner banner-success">
+      ✓ Payment received! Confirming…
+    </div>
+    <div x-show="paymentBanner === 'failed'" class="banner banner-failed">
+      ✗ Payment was not completed. You can try again below.
+    </div>
+    <div x-show="paymentBanner === 'verifying'" class="banner banner-info">
+      Taking longer than expected — your payment is being verified. Refresh to check status.
+    </div>
+  </div>
+
+  <div x-show="loading" class="spinner"></div>
+
+  <template x-if="!loading">
+    <main class="container">
+
+      <!-- Unpaid orders -->
+      <template x-if="unpaidOrders.length > 0">
+        <div>
+          <template x-for="(order, idx) in unpaidOrders" :key="order.order_id">
+            <div class="order-card">
+              <div class="order-card-header">
+                <span class="order-number" x-text="'Order #' + (idx + 1)"></span>
+                <span class="order-time" x-text="formatTime(order.placed_at)"></span>
+                <span class="order-total" x-text="'€' + (order.total_cents / 100).toFixed(2)"></span>
+              </div>
+              <div class="order-items-list">
+                <template x-for="item in order.items" :key="item.menu_item_id">
+                  <div x-text="item.quantity + '× ' + item.name + ' — €' + (item.line_total_cents / 100).toFixed(2)"></div>
+                </template>
+              </div>
+              <button class="btn btn-primary btn-sm mt-1" @click="payOrder(order.order_id)">
+                Pay this order
+              </button>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <div x-show="unpaidOrders.length === 0 && paidOrders.length === 0" class="text-center text-muted mt-3">
+        No orders yet. <a href="/menu.html">Browse the menu</a>.
+      </div>
+
+      <!-- Paid section -->
+      <template x-if="paidOrders.length > 0">
+        <div>
+          <div class="section-divider">Paid</div>
+          <template x-for="(order, idx) in paidOrders" :key="order.order_id">
+            <div class="order-card">
+              <div class="order-card-header">
+                <span class="order-number" x-text="'Order #' + (unpaidOrders.length + idx + 1)"></span>
+                <span class="order-time" x-text="formatDate(order.placed_at)"></span>
+                <span class="order-total" x-text="'€' + (order.total_cents / 100).toFixed(2)"></span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+    </main>
+  </template>
+
+  <!-- Sticky total + Pay all -->
+  <template x-if="!loading && unpaidOrders.length > 0">
+    <div class="sticky-bottom">
+      <div class="total-bar" style="position:static; border:none; padding:0 0 10px;">
+        <span class="total-bar-label">Total unpaid</span>
+        <span class="total-bar-amount" x-text="'€' + (unpaidTotal / 100).toFixed(2)"></span>
+      </div>
+      <button class="btn btn-primary btn-full" @click="payAll()">Pay all</button>
+    </div>
+  </template>
+
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="/js/orders.js"></script>
+</body>
+</html>

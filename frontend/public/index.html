@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body x-data="landingApp()" x-cloak>
+  <div class="landing">
+
+    <!-- Loading -->
+    <div x-show="loading" class="landing-card">
+      <div class="spinner" style="margin:0 auto;"></div>
+    </div>
+
+    <!-- Error: no table_id in URL -->
+    <div x-show="!loading && error" class="landing-card">
+      <h1>Old page</h1>
+      <p>If you just scanned a QR code and see this page, call the administration.</p>
+    </div>
+
+    <!-- Table taken -->
+    <div x-show="!loading && !error && status === 'taken'" class="landing-card">
+      <h1 x-text="restaurantName"></h1>
+      <p>This table is taken. Would you like to join the current session?</p>
+      <button class="btn btn-primary btn-full" @click="joinSession()">Yes, join session</button>
+    </div>
+
+    <!-- Table free -->
+    <div x-show="!loading && !error && status === 'free'" class="landing-card">
+      <h1>Welcome to</h1>
+      <h1 x-text="restaurantName" style="color:var(--color-primary)"></h1>
+      <p class="mt-1">Scan complete! Tap below to see the menu.</p>
+      <button class="btn btn-primary btn-full mt-2" @click="createSession()">To menu</button>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="/js/landing.js"></script>
+</body>
+</html>

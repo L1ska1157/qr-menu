@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menu</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body x-data="menuApp()" x-cloak>
+
+  <!-- Category nav -->
+  <nav class="category-nav" id="category-nav">
+    <template x-for="cat in categories" :key="cat.id">
+      <a :href="'#cat-' + cat.id"
+         @click.prevent="scrollToCategory(cat.id)"
+         x-text="cat.name"></a>
+    </template>
+
+    <!-- Cart badge -->
+    <a href="/cart.html" style="margin-left:auto; display:flex; align-items:center; gap:6px;">
+      🛒
+      <span class="badge" x-show="cartItemCount > 0" x-text="cartItemCount"></span>
+    </a>
+  </nav>
+
+  <!-- Spinner -->
+  <div x-show="loading" class="spinner"></div>
+
+  <!-- Menu sections -->
+  <template x-if="!loading">
+    <main class="container">
+      <template x-for="cat in categories" :key="cat.id">
+        <section class="menu-section" :id="'cat-' + cat.id">
+          <h2 class="menu-section-title" x-text="cat.name"></h2>
+          <div class="menu-grid">
+            <template x-for="item in cat.items" :key="item.id">
+              <div class="item-card" :class="{ 'sold-out': !item.is_available }">
+                <div class="item-name" x-text="item.name"></div>
+                <div class="item-desc" x-text="item.description"></div>
+                <div class="item-ingredients text-muted" x-text="item.ingredients.join(', ')"></div>
+                <div class="item-meta">
+                  <span class="item-prep" x-text="item.prep_time_minutes + ' min'"></span>
+                  <span class="item-price" x-show="item.is_available" x-text="'€' + (item.price_cents / 100).toFixed(2)"></span>
+                  <span class="sold-out-label" x-show="!item.is_available">Sold out</span>
+                </div>
+                <button class="btn btn-primary btn-sm mt-1"
+                        x-show="item.is_available"
+                        @click="addToCart(item.id)">
+                  Add to cart
+                </button>
+              </div>
+            </template>
+          </div>
+        </section>
+      </template>
+    </main>
+  </template>
+
+  <!-- Call Waiter button -->
+  <div class="waiter-btn-wrap" x-data="waiterApp()">
+    <button class="waiter-btn"
+            :class="{ cooldown: cooldownActive }"
+            :disabled="cooldownActive"
+            @click="callWaiter()">
+      <svg x-show="cooldownActive" width="68" height="68" viewBox="0 0 68 68">
+        <circle cx="34" cy="34" r="22"
+                :style="`stroke-dashoffset: ${dashOffset}`"/>
+      </svg>
+      <span>🔔</span>
+      <span style="font-size:0.55rem;" x-text="cooldownActive ? cooldownRemaining + 's' : 'Waiter'"></span>
+    </button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="/js/waiter.js"></script>
+  <script src="/js/menu.js"></script>
+</body>
+</html>

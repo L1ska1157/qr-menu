@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(powershell -File \".specify/scripts/powershell/check-prerequisites.ps1\" -Json -PathsOnly)",
-      "Bash(powershell -File \".specify/scripts/powershell/check-prerequisites.ps1\" -Json -RequireTasks -IncludeTasks)"
+      "Bash(powershell -File \".specify/scripts/powershell/check-prerequisites.ps1\" -Json -RequireTasks -IncludeTasks)",
+      "Bash(sed -i 's/- \\\\[ \\\\] T001 /- [x] T001 /' specs/001-qr-menu-ordering/tasks.md)",
+      "Bash(sed -i 's/- \\\\[ \\\\] T002 /- [x] T002 /' specs/001-qr-menu-ordering/tasks.md)",
+      "Bash(sed -i 's/- \\\\[ \\\\] T003 /- [x] T003 /' specs/001-qr-menu-ordering/tasks.md)",
+      "Bash(sed -i 's/- \\\\[ \\\\] T004 /- [x] T004 /' specs/001-qr-menu-ordering/tasks.md)",
+      "Bash(npm test:*)",
+      "Bash(node --experimental-vm-modules node_modules/jest/bin/jest.js tests/integration/table.test.js)"
     ]
   }
 }
