@@ -66,7 +66,6 @@ Provider-specific payload. The `order_id` or `payment_id` passed as metadata dur
 3. If payment status is already `completed`, return `200` immediately (idempotent — duplicate webhooks are ignored)
 4. Mark payment `completed`, set `completed_at = now()`, store `provider_reference`
 5. Mark covered orders `is_paid = true`, set `payment_id` FK on each order
-6. If all orders in the session are now paid, update `table_sessions.status` to `paid`
 
 ### Response `200 OK`
 

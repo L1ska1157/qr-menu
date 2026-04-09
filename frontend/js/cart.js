@@ -7,26 +7,39 @@ function cartApp() {
     errorMsg: '',
     sessionId: sessionStorage.getItem('session_id'),
 
+    get availableItems()   { return this.items.filter(i => i.is_available !== false); },
+    get unavailableItems() { return this.items.filter(i => i.is_available === false); },
     get total() {
-      return this.items.reduce((sum, i) => sum + (i.price_cents * i.quantity) / 100, 0);
+      return this.availableItems.reduce((sum, i) => sum + (i.price_cents * i.quantity) / 100, 0);
     },
 
     async init() {
       if (!this.sessionId) { location.href = '/'; return; }
       await Promise.all([this.fetchCart(), this.fetchUnpaidOrderCount()]);
       this.loading = false;
+      this.initSSE();
+    },
+
+    initSSE() {
+      const es = new EventSource(`/api/cart/events?session_id=${this.sessionId}`);
+      es.addEventListener('cart_updated', (e) => {
+        if (this.submitting) return;
+        this.items = JSON.parse(e.data).items;
+      });
+      es.addEventListener('session_closed', () => { location.href = '/'; });
+      window.addEventListener('beforeunload', () => es.close());
     },
 
     async fetchCart() {
       const res = await fetch(`/api/cart?session_id=${this.sessionId}`);
-      if (!res.ok) return;
+      if (!res.ok) { await isSessionError(res); return; }
       const data = await res.json();
       this.items = data.items;
     },
 
     async fetchUnpaidOrderCount() {
       const res = await fetch(`/api/orders?session_id=${this.sessionId}`);
-      if (!res.ok) return;
+      if (!res.ok) { await isSessionError(res); return; }
       const data = await res.json();
       this.unpaidOrderCount = data.orders.filter(o => !o.is_paid).length;
     },
@@ -35,11 +48,12 @@ function cartApp() {
       const item = this.items.find(i => i.menu_item_id === menuItemId);
       if (!item) return;
       item.quantity++;
-      await fetch(`/api/cart/items/${menuItemId}?session_id=${this.sessionId}`, {
+      const res = await fetch(`/api/cart/items/${menuItemId}?session_id=${this.sessionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity: item.quantity }),
       });
+      if (!res.ok) await isSessionError(res);
     },
 
     async decrement(menuItemId) {
@@ -47,24 +61,28 @@ function cartApp() {
       if (!item) return;
       if (item.quantity <= 1) {
         this.items = this.items.filter(i => i.menu_item_id !== menuItemId);
-        await fetch(`/api/cart/items/${menuItemId}?session_id=${this.sessionId}`, { method: 'DELETE' });
+        const res = await fetch(`/api/cart/items/${menuItemId}?session_id=${this.sessionId}`, { method: 'DELETE' });
+        if (!res.ok) await isSessionError(res);
       } else {
         item.quantity--;
-        await fetch(`/api/cart/items/${menuItemId}?session_id=${this.sessionId}`, {
+        const res = await fetch(`/api/cart/items/${menuItemId}?session_id=${this.sessionId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ quantity: item.quantity }),
         });
+        if (!res.ok) await isSessionError(res);
       }
     },
 
     async submitOrder() {
       this.errorMsg = '';
+      if (this.availableItems.length === 0) return;
+
       this.submitting = true;
       const res = await fetch(`/api/orders?session_id=${this.sessionId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: this.items.map(i => ({ menu_item_id: i.menu_item_id, quantity: i.quantity })) }),
+        body: JSON.stringify({ items: this.availableItems.map(i => ({ menu_item_id: i.menu_item_id, quantity: i.quantity })) }),
       });
 
       if (res.status === 201) {
@@ -74,10 +92,10 @@ function cartApp() {
       }
 
       const data = await res.json();
+      if (redirectOnSessionError(data)) return;
       if (data.error === 'ITEM_UNAVAILABLE') {
-        const ids = new Set(data.unavailable_item_ids);
-        this.items = this.items.map(i => ({ ...i, is_available: !ids.has(i.menu_item_id) }));
-        this.errorMsg = 'Some items are no longer available. Please remove them and try again.';
+        location.reload();
+        return;
       } else {
         this.errorMsg = data.message || 'Something went wrong. Please try again.';
       }

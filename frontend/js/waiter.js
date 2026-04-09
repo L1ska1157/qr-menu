@@ -16,7 +16,7 @@ function waiterApp() {
 
     async fetchStatus() {
       const res = await fetch(`/api/waiter/status?session_id=${this.sessionId}`);
-      if (!res.ok) return;
+      if (!res.ok) { await isSessionError(res); return; }
       const data = await res.json();
       this.cooldownActive = data.cooldown_active;
       this.cooldownRemaining = data.cooldown_remaining_seconds;
@@ -26,6 +26,7 @@ function waiterApp() {
     async callWaiter() {
       const res = await fetch(`/api/waiter/call?session_id=${this.sessionId}`, { method: 'POST' });
       const data = await res.json();
+      if (redirectOnSessionError(data)) return;
       if (res.status === 201) {
         this.cooldownActive = true;
         this.cooldownRemaining = 120;

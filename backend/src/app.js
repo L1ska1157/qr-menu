@@ -8,6 +8,7 @@ import ordersRouter from './routes/orders.js';
 import paymentsRouter from './routes/payments.js';
 import waiterRouter from './routes/waiter.js';
 import tableRouter from './routes/table.js';
+import paymentStubRouter from './stubs/paymentProvider.js';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 
@@ -28,6 +29,10 @@ app.use(ordersRouter);
 app.use(paymentsRouter);
 app.use(waiterRouter);
 
+// Development payment stub — remove or disable via PAYMENT_PROVIDER_URL in production
+if (process.env.NODE_ENV !== 'production') {
+  app.use(paymentStubRouter);
+}
 
 app.use(errorHandler);
 

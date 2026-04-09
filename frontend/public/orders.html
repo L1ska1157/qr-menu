@@ -38,7 +38,7 @@
           <template x-for="(order, idx) in unpaidOrders" :key="order.order_id">
             <div class="order-card">
               <div class="order-card-header">
-                <span class="order-number" x-text="'Order #' + (idx + 1)"></span>
+                <span class="order-number" x-text="'Order #' + order.number"></span>
                 <span class="order-time" x-text="formatTime(order.placed_at)"></span>
                 <span class="order-total" x-text="'€' + (order.total_cents / 100).toFixed(2)"></span>
               </div>
@@ -66,7 +66,7 @@
           <template x-for="(order, idx) in paidOrders" :key="order.order_id">
             <div class="order-card">
               <div class="order-card-header">
-                <span class="order-number" x-text="'Order #' + (unpaidOrders.length + idx + 1)"></span>
+                <span class="order-number" x-text="'Order #' + order.number"></span>
                 <span class="order-time" x-text="formatDate(order.placed_at)"></span>
                 <span class="order-total" x-text="'€' + (order.total_cents / 100).toFixed(2)"></span>
               </div>
@@ -90,6 +90,7 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="/js/utils.js"></script>
   <script src="/js/orders.js"></script>
 </body>
 </html>

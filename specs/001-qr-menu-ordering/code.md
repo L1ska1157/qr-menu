@@ -21,7 +21,7 @@ backend/
 │   │   ├── migrate.js           # Run .sql files in order
 │   │   └── queries/
 │   │       ├── tables.js        # getTableById
-│   │       ├── sessions.js      # CRUD + active/paid session lookups
+│   │       ├── sessions.js      # CRUD + active session lookups
 │   │       ├── menu.js          # Full menu tree with categories & items
 │   │       ├── cart.js          # Cart item CRUD + clear
 │   │       ├── orders.js        # Order + order_items creation, queries
@@ -133,7 +133,7 @@ frontend/
 
 | Function | Arguments | Behavior | Returns |
 |----------|-----------|----------|---------|
-| `getActiveSession` | `tableId` (uuid) | Finds active or paid session for table (only one allowed per rule) | Session row {id, table_id, status} or null |
+| `getActiveSession` | `tableId` (uuid) | Finds active session for table (only one allowed per rule) | Session row {id, table_id, status} or null |
 | `createSession` | `tableId` (uuid) | Inserts new session with opened_at=now(), status='active' | New session row {id, table_id, opened_at, status} |
 | `closeSession` | `sessionId` (uuid) | Updates status='closed', closed_at=now() for waiter cleanup | void (row count) |
 
@@ -266,7 +266,7 @@ frontend/
 | Function | Arguments | Behavior | Returns |
 |----------|-----------|----------|---------|
 | `POST /api/payments/initiate handler` | `session_id` (uuid, from validated session), `order_ids` (array of uuids, request body) | Validates that order IDs are non-empty; creates a payment record; contacts the external payment provider to open a checkout session; returns the URL the guest should be redirected to | JSON: `{redirect_url}` pointing to the provider's payment page |
-| `POST /webhooks/payment handler` | `x-provider-signature` (string, request header), raw request body | Verifies the HMAC signature to confirm the request is from the payment provider; if invalid, rejects; if valid, updates the payment status, marks covered orders as paid, and closes the session if all orders are now settled | HTTP 200 if accepted; HTTP 401 if signature check fails |
+| `POST /webhooks/payment handler` | `x-provider-signature` (string, request header), raw request body | Verifies the HMAC signature to confirm the request is from the payment provider; if invalid, rejects; if valid, updates the payment status and marks covered orders as paid | HTTP 200 if accepted; HTTP 400 if signature check fails |
 | `GET /api/payments/status handler` | `session_id` (uuid, from validated session) | Checks the is_paid flag across all session orders to determine whether the full session balance has been paid off | JSON: `{status: 'completed' \| 'pending'}` |
 
 #### `routes/waiter.js`
@@ -284,7 +284,7 @@ frontend/
 
 | Function | Arguments | Behavior | Returns |
 |----------|-----------|----------|---------|
-| `GET /api/table/:tableId/status handler` | `tableId` (uuid, URL path param) | Looks up the table by its ID; if not found returns 404; otherwise checks whether there is an active or paid session currently assigned to it | JSON: `{status: 'taken' \| 'free', session_id: uuid \| null, table_number: int, restaurant_name: string}` |
+| `GET /api/table/:tableId/status handler` | `tableId` (uuid, URL path param) | Looks up the table by its ID; if not found returns 404; otherwise checks whether there is an active session currently assigned to it | JSON: `{status: 'taken' \| 'free', session_id: uuid \| null, table_number: int, restaurant_name: string}` |
 | `POST /api/table/:tableId/session handler` | `tableId` (uuid, URL path param) | Checks whether a session already exists for this table; if one does, rejects with 409 so the guest can choose to join; if the table is free, creates a new session and returns its ID | JSON: `{session_id}` on success; HTTP 409 if a session already exists |
 
 ### App Setup

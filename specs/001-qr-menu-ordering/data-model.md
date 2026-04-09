@@ -58,12 +58,12 @@ Tracks an active dining session for a table. Created when a diner confirms entry
 | `id` | `uuid` | PK | Session identifier |
 | `table_id` | `uuid` | FK → tables.id, NOT NULL | |
 | `opened_at` | `timestamptz` | NOT NULL, DEFAULT now() | When the session was created |
-| `closed_at` | `timestamptz` | NULLABLE | NULL = session active or paid; set by waiter when cleaning the table |
-| `status` | `text` | NOT NULL, DEFAULT 'active' | `active` \| `paid` \| `closed` |
+| `closed_at` | `timestamptz` | NULLABLE | NULL = session active; set by waiter when cleaning the table |
+| `status` | `text` | NOT NULL, DEFAULT 'active' | `active` \| `closed` |
 
-**State transitions**: `active` → `paid` (after all orders fully paid) → `closed` (waiter closes after cleaning). A new session for a table can only be created once the previous one is `closed`.
+**State transitions**: `active` → `closed` (waiter closes after cleaning). A new session for a table can only be created once the previous one is `closed`.
 
-**Constraint**: Only one session per table with `status IN ('active', 'paid')` at any time — enforced at application level before insert.
+**Constraint**: Only one session per table with `status = 'active'` at any time — enforced at application level before insert.
 
 ---
 
@@ -185,7 +185,7 @@ order_items >─ menu_items     (snapshot price at order time)
 
 ```sql
 -- Fast session lookup by table (most common query path)
-CREATE INDEX idx_table_sessions_table_id ON table_sessions(table_id) WHERE status IN ('active', 'paid');
+CREATE INDEX idx_table_sessions_table_id ON table_sessions(table_id) WHERE status = 'active';
 
 -- Fast order history for bill display
 CREATE INDEX idx_orders_session_id ON orders(session_id);

@@ -5,8 +5,13 @@ function ordersApp() {
     loading: true,
     sessionId: sessionStorage.getItem('session_id'),
 
-    get unpaidOrders() { return this.orders.filter(o => !o.is_paid); },
-    get paidOrders()   { return this.orders.filter(o => o.is_paid);  },
+    get numberedOrders() {
+      return [...this.orders]
+        .sort((a, b) => new Date(a.placed_at) - new Date(b.placed_at))
+        .map((o, i) => ({ ...o, number: i + 1 }));
+    },
+    get unpaidOrders() { return this.numberedOrders.filter(o => !o.is_paid); },
+    get paidOrders()   { return this.numberedOrders.filter(o => o.is_paid);  },
     get unpaidTotal()  { return this.unpaidOrders.reduce((s, o) => s + o.total_cents, 0); },
 
     async init() {
@@ -27,7 +32,7 @@ function ordersApp() {
 
     async fetchOrders() {
       const res = await fetch(`/api/orders?session_id=${this.sessionId}`);
-      if (!res.ok) return;
+      if (!res.ok) { await isSessionError(res); return; }
       const data = await res.json();
       this.orders = data.orders;
     },
@@ -54,7 +59,7 @@ function ordersApp() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_ids: [orderId] }),
       });
-      if (!res.ok) { alert('Could not initiate payment. Please try again.'); return; }
+      if (!res.ok) { if (!await isSessionError(res)) alert('Could not initiate payment. Please try again.'); return; }
       const data = await res.json();
       location.href = data.redirect_url;
     },
@@ -66,7 +71,7 @@ function ordersApp() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_ids: ids }),
       });
-      if (!res.ok) { alert('Could not initiate payment. Please try again.'); return; }
+      if (!res.ok) { if (!await isSessionError(res)) alert('Could not initiate payment. Please try again.'); return; }
       const data = await res.json();
       location.href = data.redirect_url;
     },

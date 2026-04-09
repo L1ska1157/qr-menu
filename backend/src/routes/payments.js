@@ -3,7 +3,6 @@ import { pool } from '../config/db.js';
 import validateSession from '../middleware/validateSession.js';
 import { createPayment, updatePaymentStatus, getPaymentByProviderRef, getPaymentById, getSessionPayments } from '../db/queries/payments.js';
 import { markOrdersPaid, getOrders } from '../db/queries/orders.js';
-import { markSessionPaid } from '../db/queries/sessions.js';
 import { initiateCheckout, verifyWebhookSignature } from '../services/paymentService.js';
 
 const router = Router();
@@ -54,42 +53,35 @@ router.post('/api/payments/initiate', validateSession, async (req, res, next) =>
 router.post('/webhooks/payment', express.raw({ type: '*/*' }), async (req, res, next) => {
   const sig = req.headers['x-provider-signature'];
   if (!sig || !verifyWebhookSignature(req.body, sig)) {
-    return res.status(400).json({ error: 'INVALID_SIGNATURE', message: 'Signature verification failed' });
+    return next({ code: 'INVALID_SIGNATURE', message: 'Signature verification failed' });
   }
 
   let payload;
   try {
     payload = JSON.parse(req.body.toString());
   } catch {
-    return res.status(400).json({ error: 'INVALID_PAYLOAD', message: 'Cannot parse webhook body' });
+    return next({ code: 'INVALID_PAYLOAD', message: 'Cannot parse webhook body' });
   }
 
   const providerRef = payload.reference ?? payload.transaction_id ?? payload.id;
   const metaPaymentId = payload.metadata?.payment_id;
 
-  const payment = providerRef
-    ? await getPaymentByProviderRef(providerRef)
-    : metaPaymentId
-      ? await getPaymentById(metaPaymentId)
-      : null;
+  let payment = providerRef ? await getPaymentByProviderRef(providerRef) : null;
+  if (!payment && metaPaymentId) payment = await getPaymentById(metaPaymentId);
 
   if (!payment) {
-    return res.status(404).json({ error: 'PAYMENT_NOT_FOUND', message: 'Payment record not found' });
+    return next({ code: 'PAYMENT_NOT_FOUND', message: 'Payment record not found' });
   }
 
   // Idempotent
   if (payment.status === 'completed') return res.status(200).end();
 
-  const completedAt = new Date();
-  await updatePaymentStatus(payment.id, 'completed', providerRef, completedAt);
+  const status = payload.status === 'failed' ? 'failed' : 'completed';
+  await updatePaymentStatus(payment.id, status, providerRef, new Date());
 
-  const orderIds = payload.metadata?.order_ids ?? [];
-  if (orderIds.length) await markOrdersPaid(orderIds, payment.id);
-
-  // Check if all session orders are now paid
-  const orders = await getOrders(payment.session_id);
-  if (orders.length && orders.every(o => o.is_paid)) {
-    await markSessionPaid(payment.session_id);
+  if (status === 'completed') {
+    const orderIds = payload.metadata?.order_ids ?? [];
+    if (orderIds.length) await markOrdersPaid(orderIds, payment.id);
   }
 
   res.status(200).end();

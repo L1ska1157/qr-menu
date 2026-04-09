@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { pool } from '../config/db.js';
 import validateSession from '../middleware/validateSession.js';
-import { findUnavailableItems } from '../services/availabilityService.js';
 import { createOrder, getOrders } from '../db/queries/orders.js';
 import { clearCart } from '../db/queries/cart.js';
+import { publish } from '../services/cartEventBus.js';
 
 const router = Router();
 
@@ -20,18 +20,18 @@ router.post('/api/orders', validateSession, async (req, res, next) => {
     }
   }
 
-  const unavailable = await findUnavailableItems(req.session.id);
-  if (unavailable.length) {
-    return next({ code: 'ITEM_UNAVAILABLE', message: 'Some items are no longer available', unavailable_item_ids: unavailable });
-  }
-
-  // Fetch current prices server-side
+  // Fetch current prices — only available items are returned
   const ids = items.map(i => i.menu_item_id);
   const { rows: priceRows } = await pool.query(
     `SELECT id, price_cents FROM menu_items WHERE id = ANY($1::uuid[]) AND is_available = true`,
     [ids]
   );
   const priceMap = Object.fromEntries(priceRows.map(r => [r.id, r.price_cents]));
+
+  const unavailableIds = ids.filter(id => !priceMap[id]);
+  if (unavailableIds.length) {
+    return next({ code: 'ITEM_UNAVAILABLE', message: 'Some items are no longer available' });
+  }
 
   const enriched = items.map(item => ({
     menuItemId: item.menu_item_id,
@@ -42,6 +42,7 @@ router.post('/api/orders', validateSession, async (req, res, next) => {
   const totalCents = enriched.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
   const order = await createOrder(req.session.id, req.session.table_id, enriched, totalCents);
   await clearCart(req.session.id);
+  publish(req.session.id, 'cart_updated', { items: [] });
 
   // Return full order detail
   const orders = await getOrders(req.session.id);

@@ -5,7 +5,7 @@ export async function getActiveSession(tableId) {
     `SELECT id, table_id, status
        FROM table_sessions
       WHERE table_id = $1
-        AND status IN ('active', 'paid')
+        AND status = 'active'
       LIMIT 1`,
     [tableId]
   );
@@ -31,9 +31,3 @@ export async function closeSession(sessionId) {
   );
 }
 
-export async function markSessionPaid(sessionId) {
-  await pool.query(
-    `UPDATE table_sessions SET status = 'paid' WHERE id = $1`,
-    [sessionId]
-  );
-}

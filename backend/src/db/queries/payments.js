@@ -24,7 +24,8 @@ export async function getPaymentByProviderRef(providerRef) {
     'SELECT * FROM payments WHERE provider_reference = $1 LIMIT 1',
     [providerRef]
   );
-  return rows[0] ?? null;
+  const res = rows[0] ?? null;
+  return res;
 }
 
 export async function getPaymentById(paymentId) {
@@ -32,7 +33,8 @@ export async function getPaymentById(paymentId) {
     'SELECT * FROM payments WHERE id = $1',
     [paymentId]
   );
-  return rows[0] ?? null;
+  const res = rows[0] ?? null;
+  return res;
 }
 
 export async function getSessionPayments(sessionId) {
