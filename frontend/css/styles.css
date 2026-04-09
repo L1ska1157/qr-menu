@@ -160,6 +160,32 @@ p  { line-height: 1.5; }
   letter-spacing: 0.05em;
 }
 
+/* Item card — button/qty-control sticks to bottom */
+.item-card > .btn,
+.item-card > .qty-control {
+  margin-top: auto;
+}
+
+/* Item card qty-control — no backgrounds, plain count + plus */
+.item-card .qty-control {
+  justify-content: flex-start;
+  gap: 10px;
+}
+.item-card .qty-control button {
+  background: none;
+  box-shadow: none;
+  color: var(--color-primary);
+  font-size: 1.1rem;
+  padding: 0 4px;
+  min-width: unset;
+  height: unset;
+  border-radius: 0;
+}
+.item-card .qty-control button:hover {
+  background: none;
+  color: var(--color-primary-dark);
+}
+
 /* ===== Buttons ===== */
 .btn {
   display: inline-flex;
@@ -207,7 +233,6 @@ p  { line-height: 1.5; }
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  background: var(--color-bg);
   border-radius: var(--radius-sm);
   padding: 4px 8px;
 }
