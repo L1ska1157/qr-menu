@@ -77,10 +77,13 @@ CREATE TABLE IF NOT EXISTS payments (
 );
 
 -- Add FK from orders to payments after payments table exists
-ALTER TABLE orders
-  ADD CONSTRAINT orders_payment_id_fkey
-  FOREIGN KEY (payment_id) REFERENCES payments(id)
-  NOT VALID;
+DO $$ BEGIN
+  ALTER TABLE orders
+    ADD CONSTRAINT orders_payment_id_fkey
+    FOREIGN KEY (payment_id) REFERENCES payments(id)
+    NOT VALID;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Waiter requests
 CREATE TABLE IF NOT EXISTS waiter_requests (
