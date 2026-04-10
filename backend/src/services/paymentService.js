@@ -2,9 +2,6 @@ import crypto from 'crypto';
 import { PAYMENT_PROVIDER_URL, PAYMENT_PROVIDER_SECRET, PAYMENT_PROVIDER_WEBHOOK_SECRET, APP_BASE_URL } from '../config/env.js';
 
 export async function initiateCheckout(paymentId, orderIds, amountCents, sessionId) {
-  console.error(`[payment] initiateCheckout payment=${paymentId} orders=${orderIds.join(',')} amount=${amountCents} session=${sessionId}`);
-  console.error(`[payment] calling provider: ${PAYMENT_PROVIDER_URL}`);
-
   const res = await fetch(PAYMENT_PROVIDER_URL, {
     method: 'POST',
     headers: {
@@ -19,16 +16,12 @@ export async function initiateCheckout(paymentId, orderIds, amountCents, session
     }),
   });
 
-  console.error(`[payment] provider responded: ${res.status}`);
-
   if (!res.ok) {
     throw new Error(`Payment provider error: ${res.status}`);
   }
 
   const data = await res.json();
-  const redirectUrl = data.checkout_url ?? data.redirect_url ?? data.url;
-  console.error(`[payment] redirect URL: ${redirectUrl}`);
-  return redirectUrl;
+  return data.checkout_url ?? data.redirect_url ?? data.url;
 }
 
 export function verifyWebhookSignature(rawBody, sigHeader) {

@@ -14,7 +14,6 @@ router.post('/stub/payment/checkout', (req, res) => {
   const { amount, metadata, success_url, cancel_url } = req.body;
   const ref = crypto.randomUUID();
   pending.set(ref, { amountCents: amount, metadata, successUrl: success_url, failureUrl: cancel_url });
-  console.error(`[stub] checkout created ref=${ref} amount=${amount} payment_id=${metadata?.payment_id}`);
   res.json({ checkout_url: `${APP_BASE_URL}/stub/payment/ui?ref=${ref}` });
 });
 
@@ -123,18 +122,12 @@ router.post('/stub/payment/simulate', async (req, res) => {
 
   pending.delete(ref);
   const { metadata, successUrl, failureUrl } = session;
-  console.error(`[stub] simulate outcome=${outcome} ref=${ref} payment_id=${metadata?.payment_id}`);
-
   if (outcome === 'success') {
-    console.error(`[stub] firing success webhook`);
     await fireWebhook(ref, metadata, 'completed');
-    console.error(`[stub] webhook fired, redirecting to success URL`);
     return res.redirect(successUrl);
   }
 
-  console.error(`[stub] firing failure webhook`);
   await fireWebhook(ref, metadata, 'failed');
-  console.error(`[stub] webhook fired, redirecting to failure URL`);
   res.redirect(failureUrl);
 });
 
@@ -145,8 +138,7 @@ async function fireWebhook(providerRef, metadata, status) {
     .update(body)
     .digest('hex');
 
-  console.error(`[stub] POST ${APP_BASE_URL}/webhooks/payment status=${status}`);
-  const res = await fetch(`${APP_BASE_URL}/webhooks/payment`, {
+  await fetch(`${APP_BASE_URL}/webhooks/payment`, {
     method: 'POST',
     headers: {
       'Content-Type': 'text/plain',   // must NOT be application/json — see spec
@@ -154,7 +146,6 @@ async function fireWebhook(providerRef, metadata, status) {
     },
     body,
   });
-  console.error(`[stub] webhook response: ${res.status}`);
 }
 
 export default router;
