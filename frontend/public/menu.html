@@ -39,6 +39,7 @@
           <div class="menu-grid">
             <template x-for="item in cat.items" :key="item.id">
               <div class="item-card" :class="{ 'sold-out': !item.is_available }">
+                <img x-show="item.image_url" :src="item.image_url" :alt="item.name" class="item-img" loading="lazy">
                 <div class="item-name" x-text="item.name"></div>
                 <div class="item-desc" x-text="item.description"></div>
                 <div class="item-ingredients text-muted" x-text="item.ingredients.join(', ')"></div>

@@ -13,6 +13,7 @@ export async function getMenu() {
       i.prep_time_minutes,
       i.price_cents,
       i.is_available,
+      i.image_url,
       i.display_order AS item_order
     FROM menu_categories c
     JOIN menu_items i ON i.category_id = c.id
@@ -37,6 +38,7 @@ export async function getMenu() {
       prep_time_minutes: row.prep_time_minutes,
       price_cents: row.price_cents,
       is_available: row.is_available,
+      image_url: row.image_url ?? null,
     });
   }
   return Array.from(map.values());

@@ -160,6 +160,17 @@ p  { line-height: 1.5; }
   letter-spacing: 0.05em;
 }
 
+/* Item card image — bleeds to card edges, 2:1 ratio */
+.item-img {
+  width: calc(100% + 28px);
+  margin: -14px -14px 10px -14px;
+  aspect-ratio: 2 / 1;
+  object-fit: cover;
+  border-radius: var(--radius) var(--radius) 0 0;
+  display: block;
+  background: var(--color-border);
+}
+
 /* Item card — button/qty-control sticks to bottom */
 .item-card > .btn,
 .item-card > .qty-control {
