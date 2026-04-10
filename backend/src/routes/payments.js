@@ -40,50 +40,69 @@ router.post('/api/payments/initiate', validateSession, async (req, res, next) =>
   );
   const amountCents = totalRows[0].total;
 
+  console.log(`[payment] initiate request session=${req.session.id} orders=${order_ids.join(',')} amount=${amountCents}`);
   const payment = await createPayment(req.session.id, amountCents);
+  console.log(`[payment] payment record created id=${payment.id}`);
   try {
     const redirectUrl = await initiateCheckout(payment.id, order_ids, amountCents, req.session.id);
+    console.log(`[payment] initiate success, redirecting to provider`);
     res.json({ payment_id: payment.id, redirect_url: redirectUrl, amount_cents: amountCents });
   } catch (err) {
+    console.error(`[payment] initiate failed:`, err.message);
     next(err);
   }
 });
 
 // POST /webhooks/payment — raw body needed for HMAC
 router.post('/webhooks/payment', express.raw({ type: '*/*' }), async (req, res, next) => {
+  console.log(`[webhook] received, sig header present: ${!!req.headers['x-provider-signature']}`);
+
   const sig = req.headers['x-provider-signature'];
   if (!sig || !verifyWebhookSignature(req.body, sig)) {
+    console.error(`[webhook] signature verification failed`);
     return next({ code: 'INVALID_SIGNATURE', message: 'Signature verification failed' });
   }
+  console.log(`[webhook] signature verified`);
 
   let payload;
   try {
     payload = JSON.parse(req.body.toString());
   } catch {
+    console.error(`[webhook] failed to parse body`);
     return next({ code: 'INVALID_PAYLOAD', message: 'Cannot parse webhook body' });
   }
 
   const providerRef = payload.reference ?? payload.transaction_id ?? payload.id;
   const metaPaymentId = payload.metadata?.payment_id;
+  console.log(`[webhook] providerRef=${providerRef} metaPaymentId=${metaPaymentId} status=${payload.status}`);
 
   let payment = providerRef ? await getPaymentByProviderRef(providerRef) : null;
   if (!payment && metaPaymentId) payment = await getPaymentById(metaPaymentId);
 
   if (!payment) {
+    console.error(`[webhook] payment not found for ref=${providerRef} metaId=${metaPaymentId}`);
     return next({ code: 'PAYMENT_NOT_FOUND', message: 'Payment record not found' });
   }
+  console.log(`[webhook] found payment id=${payment.id} current status=${payment.status}`);
 
-  // Idempotent
-  if (payment.status === 'completed') return res.status(200).end();
+  if (payment.status === 'completed') {
+    console.log(`[webhook] already completed, skipping (idempotent)`);
+    return res.status(200).end();
+  }
 
   const status = payload.status === 'failed' ? 'failed' : 'completed';
   await updatePaymentStatus(payment.id, status, providerRef, new Date());
+  console.log(`[webhook] payment ${payment.id} status updated to ${status}`);
 
   if (status === 'completed') {
     const orderIds = payload.metadata?.order_ids ?? [];
-    if (orderIds.length) await markOrdersPaid(orderIds, payment.id);
+    if (orderIds.length) {
+      await markOrdersPaid(orderIds, payment.id);
+      console.log(`[webhook] orders marked paid: ${orderIds.join(',')}`);
+    }
   }
 
+  console.log(`[webhook] done, responding 200`);
   res.status(200).end();
 });
 
