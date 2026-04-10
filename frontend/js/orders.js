@@ -61,6 +61,7 @@ function ordersApp() {
       });
       if (!res.ok) { if (!await isSessionError(res)) alert('Could not initiate payment. Please try again.'); return; }
       const data = await res.json();
+      if (!data.redirect_url) { alert('Payment provider did not return a redirect URL. Please try again.'); return; }
       location.href = data.redirect_url;
     },
 
@@ -73,6 +74,7 @@ function ordersApp() {
       });
       if (!res.ok) { if (!await isSessionError(res)) alert('Could not initiate payment. Please try again.'); return; }
       const data = await res.json();
+      if (!data.redirect_url) { alert('Payment provider did not return a redirect URL. Please try again.'); return; }
       location.href = data.redirect_url;
     },
 
