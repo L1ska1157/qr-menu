@@ -30,7 +30,7 @@ app.use(paymentsRouter);
 app.use(waiterRouter);
 
 // Development payment stub — remove or disable via PAYMENT_PROVIDER_URL in production
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.PAYMENT_STUB_ENABLED === 'true') {
   app.use(paymentStubRouter);
 }
 
