@@ -1,14 +1,15 @@
 import express, { Router } from 'express';
 import { pool } from '../config/db.js';
 import validateSession from '../middleware/validateSession.js';
+import { ar } from '../middleware/asyncRoute.js';
 import { createPayment, updatePaymentStatus, getPaymentByProviderRef, getPaymentById, getSessionPayments } from '../db/queries/payments.js';
-import { markOrdersPaid, getOrders } from '../db/queries/orders.js';
+import { markOrdersPaid } from '../db/queries/orders.js';
 import { initiateCheckout, verifyWebhookSignature } from '../services/paymentService.js';
 
 const router = Router();
 
 // POST /api/payments/initiate
-router.post('/api/payments/initiate', validateSession, async (req, res, next) => {
+router.post('/api/payments/initiate', validateSession, ar(async (req, res, next) => {
   const { order_ids } = req.body;
 
   if (!order_ids || !order_ids.length) {
@@ -40,17 +41,26 @@ router.post('/api/payments/initiate', validateSession, async (req, res, next) =>
   );
   const amountCents = totalRows[0].total;
 
-  const payment = await createPayment(req.session.id, amountCents);
+  let payment;
+  try {
+    payment = await createPayment(req.session.id, amountCents);
+  } catch (err) {
+    if (err.code === '23505') {
+      return next({ code: 'PAYMENT_IN_PROGRESS', message: 'A payment is already in progress for this session' });
+    }
+    throw err;
+  }
+
   try {
     const redirectUrl = await initiateCheckout(payment.id, order_ids, amountCents, req.session.id);
     res.json({ payment_id: payment.id, redirect_url: redirectUrl, amount_cents: amountCents });
   } catch (err) {
     next(err);
   }
-});
+}));
 
 // POST /webhooks/payment — raw body needed for HMAC
-router.post('/webhooks/payment', express.raw({ type: '*/*' }), async (req, res, next) => {
+router.post('/webhooks/payment', express.raw({ type: '*/*' }), ar(async (req, res, next) => {
   const sig = req.headers['x-provider-signature'];
   if (!sig || !verifyWebhookSignature(req.body, sig)) {
     return next({ code: 'INVALID_SIGNATURE', message: 'Signature verification failed' });
@@ -84,12 +94,12 @@ router.post('/webhooks/payment', express.raw({ type: '*/*' }), async (req, res, 
   }
 
   res.status(200).end();
-});
+}));
 
 // GET /api/payments/status/:session_id
-router.get('/api/payments/status/:session_id', validateSession, async (req, res) => {
+router.get('/api/payments/status/:session_id', validateSession, ar(async (req, res) => {
   const payments = await getSessionPayments(req.session.id);
   res.json({ session_id: req.session.id, payments });
-});
+}));
 
 export default router;

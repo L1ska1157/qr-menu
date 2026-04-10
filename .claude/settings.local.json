@@ -14,7 +14,8 @@
       "Bash(node -e \"import\\('./src/app.js'\\).then\\(\\(\\) => { console.log\\('app loaded OK'\\); process.exit\\(0\\); }\\).catch\\(e => { console.error\\(e.message\\); process.exit\\(1\\); }\\)\")",
       "Bash(node --experimental-vm-modules node_modules/jest/bin/jest.js tests/integration/orders.test.js)",
       "Bash(node -e \"import\\('./src/app.js'\\).then\\(\\(\\) => { console.log\\('OK'\\); process.exit\\(0\\); }\\).catch\\(e => { console.error\\(e.message\\); process.exit\\(1\\); }\\)\")",
-      "Bash(node --experimental-vm-modules node_modules/jest/bin/jest.js tests/integration/payments.test.js)"
+      "Bash(node --experimental-vm-modules node_modules/jest/bin/jest.js tests/integration/payments.test.js)",
+      "Bash(node:*)"
     ]
   }
 }

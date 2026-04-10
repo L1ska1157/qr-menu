@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import validateSession from '../middleware/validateSession.js';
+import { ar } from '../middleware/asyncRoute.js';
 import { createWaiterRequest } from '../db/queries/waiter.js';
-import { getCooldownStatus } from '../services/waiterService.js';
+import { getCooldownStatus, COOLDOWN_SECONDS } from '../services/waiterService.js';
 import { getTableById } from '../db/queries/tables.js';
 
 const router = Router();
 
-router.post('/api/waiter/call', validateSession, async (req, res, next) => {
+router.post('/api/waiter/call', validateSession, ar(async (req, res, next) => {
   const status = await getCooldownStatus(req.session.id);
   if (status.cooldown_active) {
     return next({
@@ -18,7 +19,7 @@ router.post('/api/waiter/call', validateSession, async (req, res, next) => {
 
   const table = await getTableById(req.session.table_id);
   const request = await createWaiterRequest(req.session.id, req.session.table_id);
-  const cooldownUntil = new Date(new Date(request.requested_at).getTime() + 120_000);
+  const cooldownUntil = new Date(new Date(request.requested_at).getTime() + COOLDOWN_SECONDS * 1000);
 
   res.status(201).json({
     request_id: request.id,
@@ -26,12 +27,13 @@ router.post('/api/waiter/call', validateSession, async (req, res, next) => {
     table_number: table?.table_number,
     requested_at: request.requested_at,
     cooldown_until: cooldownUntil,
+    cooldown_seconds: COOLDOWN_SECONDS,
   });
-});
+}));
 
-router.get('/api/waiter/status', validateSession, async (req, res) => {
+router.get('/api/waiter/status', validateSession, ar(async (req, res) => {
   const status = await getCooldownStatus(req.session.id);
   res.json({ session_id: req.session.id, ...status });
-});
+}));
 
 export default router;

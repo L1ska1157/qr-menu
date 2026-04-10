@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { RESTAURANT_NAME } from '../config/env.js';
+import { ar } from '../middleware/asyncRoute.js';
 import { getTableById } from '../db/queries/tables.js';
 import { getActiveSession, createSession } from '../db/queries/sessions.js';
 import { requireUuidParam } from '../middleware/validateUuid.js';
 
 const router = Router();
 
-router.get('/api/table/:tableId/status', requireUuidParam('tableId', 'INVALID_TABLE_ID'), async (req, res, next) => {
+router.get('/api/table/:tableId/status', requireUuidParam('tableId', 'INVALID_TABLE_ID'), ar(async (req, res, next) => {
   const table = await getTableById(req.params.tableId);
   if (!table) return next({ code: 'TABLE_NOT_FOUND', message: 'Table not found' });
 
@@ -17,9 +18,9 @@ router.get('/api/table/:tableId/status', requireUuidParam('tableId', 'INVALID_TA
     table_number: table.table_number,
     restaurant_name: RESTAURANT_NAME,
   });
-});
+}));
 
-router.post('/api/table/:tableId/session', requireUuidParam('tableId', 'INVALID_TABLE_ID'), async (req, res, next) => {
+router.post('/api/table/:tableId/session', requireUuidParam('tableId', 'INVALID_TABLE_ID'), ar(async (req, res, next) => {
   const table = await getTableById(req.params.tableId);
   if (!table) return next({ code: 'TABLE_NOT_FOUND', message: 'Table not found' });
 
@@ -34,6 +35,6 @@ router.post('/api/table/:tableId/session', requireUuidParam('tableId', 'INVALID_
     table_id: table.id,
     table_number: table.table_number,
   });
-});
+}));
 
 export default router;

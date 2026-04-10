@@ -2,6 +2,7 @@ function waiterApp() {
   return {
     cooldownActive: false,
     cooldownRemaining: 0,
+    cooldownTotal: 120,
     dashOffset: 138.23,
     sessionId: sessionStorage.getItem('session_id'),
     _interval: null,
@@ -20,6 +21,7 @@ function waiterApp() {
       const data = await res.json();
       this.cooldownActive = data.cooldown_active;
       this.cooldownRemaining = data.cooldown_remaining_seconds;
+      this.cooldownTotal = data.cooldown_seconds;
       this.updateDashOffset();
     },
 
@@ -28,8 +30,9 @@ function waiterApp() {
       const data = await res.json();
       if (redirectOnSessionError(data)) return;
       if (res.status === 201) {
+        this.cooldownTotal = data.cooldown_seconds;
         this.cooldownActive = true;
-        this.cooldownRemaining = 120;
+        this.cooldownRemaining = data.cooldown_seconds;
         this.updateDashOffset();
         this.startCountdown();
       } else if (res.status === 429) {
@@ -55,7 +58,7 @@ function waiterApp() {
     },
 
     updateDashOffset() {
-      const progress = (120 - this.cooldownRemaining) / 120;
+      const progress = (this.cooldownTotal - this.cooldownRemaining) / this.cooldownTotal;
       this.dashOffset = this.circumference * (1 - progress);
     },
   };

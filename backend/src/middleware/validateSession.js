@@ -9,19 +9,23 @@ export default async function validateSession(req, res, next) {
     return next({ code: 'INVALID_SESSION_ID', message: 'session_id must be a valid UUID' });
   }
 
-  const { rows } = await pool.query(
-    'SELECT id, table_id, status FROM table_sessions WHERE id = $1',
-    [session_id]
-  );
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, table_id, status FROM table_sessions WHERE id = $1',
+      [session_id]
+    );
 
-  if (!rows.length) {
-    return next({ code: 'SESSION_NOT_FOUND', message: 'Session not found' });
+    if (!rows.length) {
+      return next({ code: 'SESSION_NOT_FOUND', message: 'Session not found' });
+    }
+
+    if (rows[0].status === 'closed') {
+      return next({ code: 'SESSION_CLOSED', message: 'This session has been closed' });
+    }
+
+    req.session = rows[0];
+    next();
+  } catch (err) {
+    next(err);
   }
-
-  if (rows[0].status === 'closed') {
-    return next({ code: 'SESSION_CLOSED', message: 'This session has been closed' });
-  }
-
-  req.session = rows[0];
-  next();
 }

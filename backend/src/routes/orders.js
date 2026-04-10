@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { pool } from '../config/db.js';
 import validateSession from '../middleware/validateSession.js';
+import { ar } from '../middleware/asyncRoute.js';
 import { createOrder, getOrders } from '../db/queries/orders.js';
 import { clearCart } from '../db/queries/cart.js';
 import { publish } from '../services/cartEventBus.js';
 
 const router = Router();
 
-router.post('/api/orders', validateSession, async (req, res, next) => {
+router.post('/api/orders', validateSession, ar(async (req, res, next) => {
   const { items } = req.body;
 
   if (!items || !items.length) {
@@ -55,12 +56,12 @@ router.post('/api/orders', validateSession, async (req, res, next) => {
     placed_at: order.placed_at,
     items: created?.items ?? [],
   });
-});
+}));
 
-router.get('/api/orders', validateSession, async (req, res) => {
+router.get('/api/orders', validateSession, ar(async (req, res) => {
   const orders = await getOrders(req.session.id);
   const unpaid_total_cents = orders.filter(o => !o.is_paid).reduce((s, o) => s + o.total_cents, 0);
   res.json({ session_id: req.session.id, orders, unpaid_total_cents });
-});
+}));
 
 export default router;
